@@ -33,6 +33,74 @@ Next.js Frontend ←→ HTTP/WebSocket ←→ C/C++ REST API ←→ AI Component
 
 This project is structured to progressively apply C/C++ and systems programming concepts as you advance through your curriculum.
 
+### Just‑in‑Time Topic → Build Map
+
+Use this map to ensure you build exactly what you just learned. After you finish a topic, do the matching mini‑build before moving on.
+
+- C syntax: variables, control flow, functions
+  - Build: A CLI echo tool with argv parsing (src/utils/), return codes for errors
+  - Done when: it handles unknown flags and prints a helpful usage string
+
+- Strings and arrays
+  - Build: HTTP request line parser that extracts method and path (src/http/)
+  - Done when: malformed requests don’t crash; adds unit test in tests/test_http_parser.c
+
+- File I/O (fopen/fgets/fread), error handling (errno)
+  - Build: INI/TOML‑style config loader for server settings (src/core/config.c)
+  - Done when: missing keys fall back to defaults; tests cover malformed lines
+
+- Structs and modular design (headers, .c files)
+  - Build: Define http_request_t/http_response_t headers in include/
+  - Done when: the server compiles without exposing internal fields across modules
+
+- Processes and the OS (system(), exit codes)
+  - Build: Minimal process launcher that shells out to a mock AI (src/ai/launcher.c)
+  - Done when: you capture stdout and return it as the HTTP body for /chat
+
+- Pointers 101 (addresses, dereference, pointer arithmetic)
+  - Build: Replace fixed buffers with a malloc’d body sized by Content‑Length
+  - Done when: Valgrind shows 0 leaks after 2 minutes of requests
+
+- Dynamic memory APIs (malloc/calloc/realloc/free)
+  - Build: Growable buffer type (vector<char>) for request/response assembly (src/utils/buf.c)
+  - Done when: reallocation preserves content; unit tests pass
+
+- Linked lists and ownership
+  - Build: Conversation history as an intrusive singly linked list
+  - Done when: you can append/prune N messages and free everything cleanly
+
+- Pipes/sockets & IPC
+  - Build: Replace system() with bidirectional pipes to the AI process
+  - Done when: you stream partial responses over chunked HTTP without blocking
+
+- Ring buffers and circular queues
+  - Build: Audio ring buffer for Whisper input (src/audio/ringbuf.c)
+  - Done when: producer/consumer tests show no overwrites at target rates
+
+- Bitwise ops, masks, and bitfields
+  - Build: Pack server flags (streaming, gzip, auth) into a byte sent in response headers
+  - Done when: unit tests verify set/clear/toggle paths across all flags
+
+- Endianness and binary formats
+  - Build: WAV header parser (src/audio/wav.c) with host/network byte‑order conversions
+  - Done when: golden test files round‑trip; invalid headers rejected with clear errors
+
+- Checksums and simple encodings
+  - Build: Base64 encoder/decoder + fast rolling hash for headers
+  - Done when: vectors from RFC test files match exactly
+
+- Hash tables and maps
+  - Build: Open‑addressing hash table for session store (src/core/hashtab.c)
+  - Done when: collision stress tests keep load factor under target and lookups O(1) avg
+
+- Queues/priority queues
+  - Build: Token bucket rate limiter + priority queue for requests
+  - Done when: enforced limits remain accurate at 1–100 rps in tests
+
+- CMake/Make, static analysis, and testing
+  - Build: Makefile targets: make test, make asan, make tsan, make bench
+  - Done when: CI (local) runs unit tests and Valgrind/ASan cleanly
+
 ### Phase 1: C Language Fundamentals
 
 **Concepts Applied:**
@@ -275,37 +343,6 @@ This project is structured to progressively apply C/C++ and systems programming 
 
 **Learning Focus**: Low-level optimization, kernel programming, real-time systems
 
-## Technical Deep Dives
-
-### HTTP Server Implementation
-```c
-// Example: Applying pointer concepts in HTTP parsing
-typedef struct {
-    char* method;       // Pointer to method string
-    char* path;         // Pointer to URL path
-    char* headers;      // Pointer to headers block
-    size_t content_len; // Content length for body allocation
-    char* body;         // Dynamically allocated body
-} http_request_t;
-```
-
-### Process Communication
-```c
-// Example: IPC with AI processes using pipes
-typedef struct {
-    pid_t pid;          // Process ID
-    int stdin_fd;       // Pipe to process stdin
-    int stdout_fd;      // Pipe from process stdout
-    char* buffer;       // Dynamic response buffer
-    size_t buffer_size; // Current buffer allocation
-} ai_process_t;
-```
-
-### Memory Management Strategy
-- **Request Pools**: Pre-allocate request structures for common sizes
-- **Buffer Reuse**: Maintain buffer pools to avoid frequent allocation
-- **Model Caching**: Memory-map AI models for instant access
-- **Garbage Collection**: Implement reference counting for shared resources
 
 ### Performance Considerations
 - **Zero-Copy Operations**: Minimize memory copies in data pipeline
@@ -313,64 +350,131 @@ typedef struct {
 - **CPU Affinity**: Pin threads to specific cores for consistent latency
 - **Memory Prefetching**: Optimize cache usage for AI model access
 
-## Docker Container Specifications
-
-### Base Image Strategy
-```dockerfile
-# Multi-stage build for C/C++ compilation
-FROM nvidia/cuda:12.0-devel-ubuntu22.04 as builder
-# Build C/C++ components with GPU support
-
-FROM nvidia/cuda:12.0-runtime-ubuntu22.04 as runtime
-# Copy compiled binaries and AI models
-```
-
-### Resource Requirements
-- **Memory**: 16GB+ for LLaMA 3 8B model
-- **GPU**: NVIDIA GPU with 8GB+ VRAM or Apple Silicon Mac
-- **Storage**: 10GB+ for all AI models and dependencies
-- **CPU**: 4+ cores recommended for concurrent processing
-
-### Container Features
-1. **Health Checks**: Implement comprehensive health monitoring
-2. **Graceful Shutdown**: Proper signal handling for container lifecycle
-3. **Volume Mounts**: Support for external model storage
-4. **Environment Configuration**: Runtime configuration via environment variables
-
-## Learning Outcomes
-
-By completing this project, you will have practical experience with:
-
-**C/C++ Programming:**
-- Production-quality server development
-- Memory management in complex applications
-- Network programming and protocol implementation
-- Integration with external libraries and processes
-
-**Systems Programming:**
-- Low-level performance optimization
-- Kernel-level resource management
-- Real-time system design
-- Hardware-software integration
-
-**DevOps and Deployment:**
-- Containerized application development
-- Cross-platform compilation and deployment
-- Performance tuning and monitoring
-- Production reliability patterns
-
-## Getting Started
-
-1. **Environment Setup**: Install Docker, NVIDIA Container Runtime, and development tools
-2. **Model Download**: Acquire LLaMA 3 8B, Whisper, and Piper TTS models
-3. **Basic Implementation**: Start with Phase 1 HTTP server
-4. **Progressive Enhancement**: Add features as you master each concept area
-5. **Performance Tuning**: Apply advanced systems concepts for optimization
-
 ## Success Metrics
 
 - **Latency**: Sub-500ms response time for text chat, sub-2s for voice
 - **Memory Usage**: Efficient memory utilization under 8GB total
-- **Concurrent Users**: Handle 10+ simultaneous connections
 - **Reliability**: 99.9% uptime with proper error recovery
 - **Code Quality**: Clean, maintainable C/C++ following best practices
+
+## Debugging and Profiling
+
+### Development Tools
+- **GDB**: For debugging C/C++ applications
+- **Valgrind**: Memory error detection and profiling
+- **Perf**: Linux performance analysis
+- **AddressSanitizer**: Runtime error detection
+- **Clang-tidy**: Static code analysis
+
+### Performance Monitoring
+- **System Metrics**: CPU, memory, and GPU utilization
+- **Application Metrics**: Request latency, throughput, error rates
+- **AI Model Metrics**: Inference time, model loading time
+- **Network Metrics**: Connection count, bandwidth usage
+
+## Contributing Guidelines
+
+### Code Style
+- Follow Linux kernel coding style for C code
+- Use consistent naming conventions (snake_case for functions/variables)
+- Include comprehensive comments for complex algorithms
+- Maintain clean separation between modules
+
+### Git Workflow
+- Use feature branches for new development
+- Write descriptive commit messages
+- Include tests with new features
+- Update documentation for API changes
+
+### Pull Request Process
+1. Ensure all tests pass
+2. Run static analysis tools
+3. Update relevant documentation
+4. Request code review from maintainers
+
+## Troubleshooting
+
+### Common Issues
+
+#### Build Problems
+```bash
+# Missing dependencies
+sudo apt install build-essential cmake pkg-config
+
+# Compiler errors with GPU libraries
+export CUDA_PATH=/usr/local/cuda
+export LD_LIBRARY_PATH=$CUDA_PATH/lib64:$LD_LIBRARY_PATH
+```
+
+#### Runtime Issues
+```bash
+# Memory allocation failures
+ulimit -v unlimited  # Remove virtual memory limits
+echo 'vm.overcommit_memory=1' | sudo tee -a /etc/sysctl.conf
+
+# GPU access problems
+sudo usermod -a -G docker $USER  # Add user to docker group
+sudo systemctl restart docker     # Restart Docker daemon
+```
+
+#### Performance Issues
+- **High Memory Usage**: Check for memory leaks with Valgrind
+- **Slow Response Times**: Profile with perf and optimize hot paths
+- **GPU Utilization**: Monitor with nvidia-smi, ensure proper CUDA setup
+
+### Debug Mode
+```bash
+# Compile with debug symbols
+make DEBUG=1
+
+# Run with debugging tools
+gdb ./roleplay_server
+valgrind --leak-check=full ./roleplay_server
+```
+
+## Milestone Tracking
+
+### Phase 1 Checklist: C Fundamentals ✓/❌
+- [ ] Basic HTTP request parsing
+- [ ] Simple GET/POST endpoint handling
+- [ ] JSON response generation
+- [ ] Configuration file parsing
+- [ ] Process execution with system() calls
+- [ ] Basic error handling and logging
+- [ ] Command-line argument processing
+
+### Phase 2 Checklist: Pointers & Memory ✓/❌
+- [ ] Dynamic memory allocation for requests
+- [ ] Pointer-based string manipulation
+- [ ] Inter-process communication with pipes
+- [ ] Linked list for conversation history
+- [ ] Memory leak detection and prevention
+- [ ] Buffer overflow protection
+- [ ] Proper cleanup and resource management
+
+### Phase 3 Checklist: Bit Manipulation ✓/❌
+- [ ] Audio header parsing with bit operations
+- [ ] Binary protocol implementation
+- [ ] Custom serialization formats
+- [ ] Performance optimization with bitwise ops
+- [ ] Endianness handling
+- [ ] SIMD-style optimizations
+- [ ] Base64 encoding/decoding
+
+### Phase 4 Checklist: Data Structures ✓/❌
+- [ ] Hash table for session management
+- [ ] LRU cache implementation
+- [ ] Priority queue for request scheduling
+- [ ] B-tree for persistent storage
+- [ ] Connection pooling
+- [ ] Rate limiting algorithms
+- [ ] Advanced error recovery
+
+### Phase 5 Checklist: Systems Programming ✓/❌
+- [ ] ARM assembly optimizations
+- [ ] Custom memory allocators
+- [ ] Kernel module integration
+- [ ] Real-time scheduling
+- [ ] GPU memory management
+- [ ] Zero-copy operations
+- [ ] Performance profiling and tuning
