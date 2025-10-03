@@ -17,8 +17,13 @@
  */
 
 // TODO: Add header guards
+#ifndef ROUTES_H
+#define ROUTES_H
+
 
 // TODO: Declare route handler function prototypes
+char* handle_health_check(void);
+char* handle_not_found(void);
 
 // TODO: Close header guard
-
+#endif
