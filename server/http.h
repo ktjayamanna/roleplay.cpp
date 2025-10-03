@@ -39,7 +39,7 @@ typedef struct {
 } HttpResponse;
 
 // TODO: Declare function prototypes
-char* http_build_response(int status_code, const char* body);
+HttpResponse* http_build_response(int status_code, const char* body);
 void http_parse_request(const char* request, char* method, char* path);
 
 // TODO: Close header guard
