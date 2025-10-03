@@ -65,3 +65,7 @@ HttpResponse* http_build_response(int status_code, const char* body) {
 
 // TODO: Implement http_parse_request()
 
+void http_parse_request(const char* request, char* method, char* path) {
+    sscanf(request, "%s %s", method, path);
+}
+
