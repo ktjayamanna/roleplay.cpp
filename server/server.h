@@ -22,9 +22,22 @@
 
 // TODO: Add header guards
 
+#ifndef SERVER_H
+#define SERVER_H
+
+
 // TODO: Define Server struct
+typedef struct {
+    int socket_fd;
+    int port;
+    int is_running;
+} Server;
 
 // TODO: Declare function prototypes
+int server_init(int port);
+int server_start(void);
+void server_stop(void);
+void handle_client(int client_fd);
 
 // TODO: Close header guard
-
+#endif
