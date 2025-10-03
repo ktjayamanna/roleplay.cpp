@@ -1,0 +1,38 @@
+{
+  "name": "Role Play ",
+  "dockerFile": "../Dockerfile",
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+  
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "files.eol": "\n",
+        "editor.formatOnSave": false,
+        "C_Cpp.default.cStandard": "c11",
+        "C_Cpp.default.compilerPath": "/usr/local/bin/gcc"
+      },
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-vscode.cpptools-extension-pack",
+        "augment.vscode-augment",
+        "pomdtr.excalidraw-editor"
+
+      ]
+    }
+  },
+  
+  "forwardPorts": [8080],
+  "portsAttributes": {
+    "8080": {
+      "label": "Web Server",
+      "onAutoForward": "notify"
+    }
+  },
+  
+  "postCreateCommand": "gcc --version",
+  
+  "remoteUser": "root"
+}
+
