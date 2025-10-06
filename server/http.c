@@ -39,7 +39,7 @@
 // TODO: Implement http_build_response()
 
 HttpResponse* http_build_response(int status_code, const char* body) {
-    const char* status_text = (status_code == 200) ? "OK" : "Not Found";
+    const char* status_text = (status_code == 200) ?  HTTP_OK: HTTP_NOT_FOUND;
     int body_length = strlen(body);
     
     const char* format = "HTTP/1.1 %d %s\r\n"

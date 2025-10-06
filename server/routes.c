@@ -21,8 +21,24 @@
  */
 
 // TODO: Add your includes here
+#include "routes.h"
+#include "http.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 // TODO: Implement handle_health_check()
 
+char* handle_health_check(void) {
+    const char* body = "{\"status\": \"ok\"}";
+    HttpResponse* response = http_build_response(HTTP_OK, body);
+    return response->body;
+}
+
 // TODO: Implement handle_not_found()
+
+char* handle_not_found(void) {
+    const char* body = "{\"error\": \"Not Found\"}";
+    HttpResponse* response = http_build_response(HTTP_NOT_FOUND, body);
+    return response->body;
+}
 
