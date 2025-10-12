@@ -111,6 +111,14 @@ void server_stop() {
     close(server.socket_fd);
 }
 
+char* handle_route(char* method, char* path) {
+    if (strcmp(path, "/health") == 0) {
+        return handle_health_check();
+    } else {
+        return handle_not_found();
+    }
+}
+
 // TODO: Implement handle_client()
 
 void handle_client(int client_fd) {

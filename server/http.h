@@ -27,8 +27,8 @@
 
 // TODO: Define HTTP status code constants
 
-const int HTTP_OK = 200;
-const int HTTP_NOT_FOUND = 404;
+#define HTTP_OK 200
+#define HTTP_NOT_FOUND 404
 
 // TODO: Define HttpResponse struct
 
