@@ -1,2 +1,6 @@
 # Target roles
 to_auggie/
+# ignore .o files
+*.o
+*.exe
+webserver
