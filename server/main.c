@@ -24,7 +24,7 @@
 
 // TODO: Define PORT constant (8080)
 
-int main(int argc, char *argv[]) {
+int main() {
     // TODO: Print startup message
     printf("Server starting on port 8080...\n");
     
