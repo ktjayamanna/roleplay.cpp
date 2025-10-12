@@ -17,7 +17,8 @@
         "ms-vscode.cpptools",
         "ms-vscode.cpptools-extension-pack",
         "augment.vscode-augment",
-        "pomdtr.excalidraw-editor"
+        "pomdtr.excalidraw-editor",
+        "codeium.codeium"
 
       ]
     }
