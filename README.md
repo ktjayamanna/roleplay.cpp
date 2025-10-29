@@ -4,6 +4,21 @@
 
 This project implements a high-performance, local AI voice agent using C/C++ for the backend REST API and Next.js for the frontend interface. The system is designed as a progressive learning vehicle for mastering C/C++ fundamentals and advanced systems programming concepts while building a practical, production-quality application.
 
+## Quick Start
+
+### HTTP Server Library
+
+The project includes a reusable C HTTP server library in the `server/` directory. See `examples/` for a complete calculator demo showing how to use the library.
+
+```bash
+cd examples
+make
+./calculator
+
+# Test the API
+curl "http://localhost:8080/add?a=5&b=3"
+```
+
 ### System Architecture
 
 ```
