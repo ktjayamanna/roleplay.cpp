@@ -6,7 +6,7 @@ CFLAGS = -Wall -Wextra -std=c11 -g
 LIB_SRCS = ../server/server.c ../server/http.c ../server/endpoint.c
 
 # Application source
-APP_SRCS = calculator.c
+APP_SRCS = sound_gen.c
 
 # Object files
 LIB_OBJS = $(LIB_SRCS:.c=.o)

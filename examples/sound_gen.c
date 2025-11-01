@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../server/server.h"
+
 
 typedef struct {
     unsigned char* data;
@@ -74,28 +76,28 @@ void free_byte_stream(ByteStream* stream) {
 /**
  * Example usage of the read_mp3_file function
  */
-int main() {
-    const char* filename = "music.mp3";
 
-    ByteStream mp3_stream = read_mp3_file(filename);
-
-    if (mp3_stream.data) {
-        printf("Successfully loaded MP3 file: %s\n", filename);
-        printf("File size: %zu bytes\n", mp3_stream.size);
-
-        // Example: Print first few bytes as hex
-        printf("First 16 bytes (hex): ");
-        for (int i = 0; i < 16 && i < (int)mp3_stream.size; i++) {
-            printf("%02X ", mp3_stream.data[i]);
-        }
-        printf("\n");
-
-        // Clean up memory
-        free_byte_stream(&mp3_stream);
-    } else {
-        printf("Failed to load MP3 file: %s\n", filename);
-        return 1;
+EndpointResponse *handle_sound(const RequestContext* request) {
+    ByteStream mp3_stream = read_mp3_file("music.mp3");
+    if (!mp3_stream.data) {
+        return response_error(404, "Audio file not found");
     }
+    EndpointResponse* response = malloc(sizeof(EndpointResponse));
+    response->status_code = 200;
+    response->body = malloc(mp3_stream.size);
+    memcpy(response->body, mp3_stream.data, mp3_stream.size);
+    response->content_type = "audio/mpeg";
+    free_byte_stream(&mp3_stream);
+    return response;
+    
+}
+
+
+
+int main() {
+    server_init(8080);
+    SERVER_GET("/sound", handle_sound);
+    server_start();
 
     return 0;
 }
