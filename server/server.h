@@ -62,11 +62,6 @@ void server_stop(void);
 // ENDPOINT REGISTRATION FUNCTIONS
 // ============================================================================
 
-// Register a simple endpoint that returns static content
-// method: "GET", "POST", "PUT", "DELETE"
-// content_type: "application/json", "text/plain", etc. (optional, defaults to application/json)
-int server_register_simple(const char* path, const char* method, const char* response_body, const char* content_type);
-
 // Register an endpoint with a custom handler function
 int server_register_handler(const char* path, const char* method, EndpointHandler handler);
 
@@ -99,6 +94,5 @@ EndpointResponse* response_error(int status_code, const char* error_message);
 // Quick endpoint registration macros
 #define SERVER_GET(path, handler) server_register_handler(path, "GET", handler)
 #define SERVER_POST(path, handler) server_register_handler(path, "POST", handler)
-#define SERVER_SIMPLE_GET(path, response) server_register_simple(path, "GET", response, NULL)
 
 #endif

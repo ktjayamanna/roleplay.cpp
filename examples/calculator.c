@@ -39,11 +39,9 @@ int main() {
     
     // Register endpoints
     SERVER_GET("/add", handle_add);
-    server_register_simple("/health", "GET", "{\"status\": \"ok\"}", "application/json");
-    
+
     printf("Calculator ready! Try:\n");
     printf("  curl \"http://localhost:8080/add?a=5&b=3\"\n");
-    printf("  curl \"http://localhost:8080/health\"\n");
     
     // Start serving
     server_start();

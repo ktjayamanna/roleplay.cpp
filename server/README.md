@@ -17,7 +17,6 @@ Defines the public API for the HTTP server library. Key components:
 - `server_stop()` - Stop the server
 
 **Endpoint Registration:**
-- `server_register_simple()` - Register static response endpoints
 - `server_register_handler()` - Register custom handler endpoints
 
 **Helper Functions:**
@@ -64,7 +63,7 @@ Implements the main server logic:
   - Builds HTTP response
   - Returns response string
 
-- **`server_register_simple()` & `server_register_handler()`** - Endpoint registration wrappers
+- **`server_register_handler()`** - Endpoint registration wrapper that converts string method names to enums
 
 - **Response helpers** - Wrapper functions that delegate to endpoint system
 

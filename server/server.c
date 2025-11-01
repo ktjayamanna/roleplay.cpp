@@ -174,41 +174,6 @@ static HttpMethod parse_method_string(const char* method_str) {
     return HTTP_METHOD_GET; // Default
 }
 
-// Simple endpoint handler for static responses
-static EndpointResponse* simple_endpoint_handler(const RequestContext* request, const char* response_body, const char* content_type) {
-    (void)request; // Suppress unused parameter warning
-    return endpoint_create_response(200, response_body, content_type ? content_type : "application/json");
-}
-
-// Structure to hold simple endpoint data
-typedef struct {
-    char* response_body;
-    char* content_type;
-} SimpleEndpointData;
-
-// Handler wrapper for simple endpoints
-static EndpointResponse* simple_endpoint_wrapper(const RequestContext* request) {
-    // This is a bit of a hack - we'll store the data in a global array
-    // In a real implementation, you'd want a more sophisticated approach
-    static SimpleEndpointData simple_endpoints[50];
-    static int simple_endpoint_count = 0;
-
-    // For now, just return a basic response
-    // TODO: Implement proper data storage for simple endpoints
-    (void)request;
-    return endpoint_json_response(200, "{\"message\": \"Simple endpoint\"}");
-}
-
-// Register a simple endpoint
-int server_register_simple(const char* path, const char* method, const char* response_body, const char* content_type) {
-    printf("Registering simple endpoint: %s %s\n", method, path);
-
-    HttpMethod http_method = parse_method_string(method);
-
-    // For now, use a simple wrapper - in a full implementation you'd store the response data
-    return endpoint_register(path, http_method, simple_endpoint_wrapper);
-}
-
 // Register an endpoint with custom handler
 int server_register_handler(const char* path, const char* method, EndpointHandler handler) {
     printf("Registering custom endpoint: %s %s\n", method, path);

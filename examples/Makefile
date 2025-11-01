@@ -6,7 +6,7 @@ CFLAGS = -Wall -Wextra -std=c11 -g
 LIB_SRCS = ../server/server.c ../server/http.c ../server/endpoint.c
 
 # Application source
-APP_SRCS = sound_gen.c
+APP_SRCS = calculator.c
 
 # Object files
 LIB_OBJS = $(LIB_SRCS:.c=.o)
@@ -37,9 +37,6 @@ test: $(TARGET)
 	@./$(TARGET) &
 	@SERVER_PID=$$!; \
 	sleep 2; \
-	echo "Health check:"; \
-	curl -s "http://localhost:8080/health" | head -1; \
-	echo ""; \
 	echo "Addition (5 + 3):"; \
 	curl -s "http://localhost:8080/add?a=5&b=3" | head -1; \
 	echo ""; \

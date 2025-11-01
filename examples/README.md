@@ -64,7 +64,6 @@ EndpointResponse* handle_add(const RequestContext* request) {
 int main() {
     server_init(8080);                    // Initialize on port 8080
     SERVER_GET("/add", handle_add);       // Register endpoint
-    server_register_simple("/health", "GET", "{\"status\": \"ok\"}", "application/json");
     server_start();                       // Start serving
     return 0;
 }
@@ -86,10 +85,6 @@ make
 # Addition endpoint
 curl "http://localhost:8080/add?a=5&b=3"
 # Returns: {"operation": "add", "a": 5, "b": 3, "result": 8}
-
-# Health check
-curl "http://localhost:8080/health"
-# Returns: {"status": "ok"}
 
 # Error handling
 curl "http://localhost:8080/add?a=5"
