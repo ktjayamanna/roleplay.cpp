@@ -136,11 +136,16 @@ void endpoint_response_free(EndpointResponse* response) {
 EndpointResponse* endpoint_create_response(int status_code, const char* body, const char* content_type) {
     EndpointResponse* response = malloc(sizeof(EndpointResponse));
     if (!response) return NULL;
-    
+
     response->status_code = status_code;
     response->body = body ? strdup(body) : NULL;
     response->content_type = content_type ? strdup(content_type) : strdup("application/json");
-    
+
+    // TODO: PHASE 1 - Initialize binary fields
+    // Add these lines after setting content_type:
+    //   response->body_length = body ? strlen(body) : 0;
+    //   response->is_binary = 0;  // Text response by default
+
     return response;
 }
 
@@ -176,3 +181,72 @@ EndpointResponse* endpoint_error_response(int status_code, const char* error_mes
     free(json_body); // endpoint_create_response makes a copy
     return response;
 }
+
+// TODO: PHASE 1 - Implement endpoint_binary_response()
+// This function creates a response containing binary data
+//
+// EndpointResponse* endpoint_binary_response(int status_code, const void* data,
+//                                           size_t data_length, const char* content_type) {
+//     // STEP 1: Allocate EndpointResponse structure
+//     //   EndpointResponse* response = malloc(sizeof(EndpointResponse));
+//     //   if (!response) return NULL;
+//
+//     // STEP 2: Set status code
+//     //   response->status_code = status_code;
+//
+//     // STEP 3: Allocate and copy binary data
+//     //   response->body = malloc(data_length);
+//     //   if (!response->body) { free(response); return NULL; }
+//     //   memcpy(response->body, data, data_length);  // Use memcpy for binary data!
+//
+//     // STEP 4: Set binary-specific fields
+//     //   response->body_length = data_length;
+//     //   response->is_binary = 1;
+//
+//     // STEP 5: Set content type
+//     //   response->content_type = strdup(content_type);
+//
+//     // STEP 6: Return the response
+//     //   return response;
+// }
+
+// TODO: PHASE 1 - Implement endpoint_file_response()
+// This function reads a file from disk and creates a binary response
+//
+// EndpointResponse* endpoint_file_response(int status_code, const char* file_path) {
+//     // STEP 1: Open file in binary mode
+//     //   FILE* file = fopen(file_path, "rb");
+//     //   if (!file) {
+//     //       fprintf(stderr, "Error: Could not open file %s\n", file_path);
+//     //       return endpoint_error_response(404, "File not found");
+//     //   }
+//
+//     // STEP 2: Get file size
+//     //   fseek(file, 0, SEEK_END);
+//     //   long file_size = ftell(file);
+//     //   fseek(file, 0, SEEK_SET);  // Rewind to beginning
+//
+//     // STEP 3: Allocate buffer and read file
+//     //   char* file_data = malloc(file_size);
+//     //   if (!file_data) { fclose(file); return NULL; }
+//     //   size_t bytes_read = fread(file_data, 1, file_size, file);
+//     //   fclose(file);
+//
+//     // STEP 4: Detect content type from file extension
+//     //   const char* content_type = "application/octet-stream";  // Default
+//     //   const char* ext = strrchr(file_path, '.');  // Find last '.'
+//     //   if (ext) {
+//     //       if (strcmp(ext, ".mp3") == 0) content_type = "audio/mpeg";
+//     //       else if (strcmp(ext, ".png") == 0) content_type = "image/png";
+//     //       else if (strcmp(ext, ".jpg") == 0 || strcmp(ext, ".jpeg") == 0) content_type = "image/jpeg";
+//     //       else if (strcmp(ext, ".gif") == 0) content_type = "image/gif";
+//     //       else if (strcmp(ext, ".pdf") == 0) content_type = "application/pdf";
+//     //       else if (strcmp(ext, ".txt") == 0) content_type = "text/plain";
+//     //       else if (strcmp(ext, ".html") == 0) content_type = "text/html";
+//     //   }
+//
+//     // STEP 5: Create binary response using endpoint_binary_response()
+//     //   EndpointResponse* response = endpoint_binary_response(status_code, file_data, bytes_read, content_type);
+//     //   free(file_data);  // endpoint_binary_response makes a copy
+//     //   return response;
+// }

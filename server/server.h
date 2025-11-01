@@ -30,6 +30,15 @@ typedef struct RequestContext {
     int body_length;
     RequestParam params[MAX_PARAMS]; // Query parameters and URL parameters
     int param_count;
+
+    // TODO: PHASE 2 - Add request content type tracking
+    // Add the following field to track incoming content type:
+    // - char content_type[128];   // Content-Type header from request (e.g., "application/octet-stream")
+    //
+    // RATIONALE:
+    // - Handlers need to know if incoming data is JSON, binary, multipart, etc.
+    // - This allows proper parsing of request body based on content type
+    // - Future: Can be used for multipart/form-data file upload parsing
 } RequestContext;
 
 // Response structure returned by endpoint handlers
@@ -37,6 +46,16 @@ typedef struct EndpointResponse {
     int status_code;
     char* body;                    // Response body (handler must allocate)
     char* content_type;           // Content type (optional, defaults to application/json)
+
+    // TODO: PHASE 1 - Add binary file support fields
+    // Add the following fields to support binary responses:
+    // - size_t body_length;      // Length of body in bytes (important for binary data)
+    // - int is_binary;            // Flag: 1 for binary data, 0 for text (affects null-termination handling)
+    //
+    // RATIONALE:
+    // - Text responses can use strlen(), but binary data may contain null bytes
+    // - is_binary flag tells the HTTP layer whether to treat body as string or raw bytes
+    // - This maintains backward compatibility (existing text responses still work)
 } EndpointResponse;
 
 // Function pointer type for endpoint handlers

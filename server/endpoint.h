@@ -47,4 +47,34 @@ int endpoint_get_param_int(const RequestContext* request, const char* param_name
 EndpointResponse* endpoint_json_response(int status_code, const char* json_body);
 EndpointResponse* endpoint_error_response(int status_code, const char* error_message);
 
+// TODO: PHASE 1 - Declare binary response helper functions
+// Add function declarations for binary file support:
+//
+// EndpointResponse* endpoint_binary_response(int status_code, const void* data,
+//                                           size_t data_length, const char* content_type);
+// DESCRIPTION: Create a response with binary data (images, audio, etc.)
+// PARAMETERS:
+//   - status_code: HTTP status (usually 200)
+//   - data: Pointer to binary data buffer
+//   - data_length: Size of data in bytes
+//   - content_type: MIME type (e.g., "image/png", "audio/mpeg", "application/octet-stream")
+// RETURNS: EndpointResponse with is_binary=1 and body_length set
+// MEMORY: Makes a copy of data, caller can free original after function returns
+//
+// EndpointResponse* endpoint_file_response(int status_code, const char* file_path);
+// DESCRIPTION: Read a file from disk and create a binary response
+// PARAMETERS:
+//   - status_code: HTTP status (usually 200)
+//   - file_path: Path to file on disk
+// RETURNS: EndpointResponse with file contents, or NULL on error
+// MEMORY: Allocates memory for file contents, automatically detects content type from extension
+// NOTE: Returns NULL if file doesn't exist or can't be read
+//
+// IMPLEMENTATION HINTS:
+// - Use fopen() with "rb" mode for binary files
+// - Use fseek()/ftell() to get file size
+// - Use malloc() to allocate buffer for file contents
+// - Use memcpy() instead of strcpy() for binary data
+// - Set is_binary=1 and body_length=actual_size
+
 #endif
