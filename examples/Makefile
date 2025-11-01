@@ -1,51 +1,111 @@
-# Simple Calculator using Server Library
+# Examples using Server Library
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c11 -g
 
+# Build directory for all intermediate and output files
+BUILD_DIR = build
+
 # Server library files (from ../server/ directory)
 LIB_SRCS = ../server/server.c ../server/http.c ../server/endpoint.c
+LIB_OBJS = $(patsubst ../server/%.c,$(BUILD_DIR)/%.o,$(LIB_SRCS))
 
-# Application source
-APP_SRCS = calculator.c
+# ============================================================================
+# APP CONFIGURATION - Change APP_NAME to build different apps
+# ============================================================================
+APP_NAME ?= calculator
 
-# Object files
-LIB_OBJS = $(LIB_SRCS:.c=.o)
-APP_OBJS = $(APP_SRCS:.c=.o)
-ALL_OBJS = $(LIB_OBJS) $(APP_OBJS)
+# Application source and output
+APP_SRC = $(APP_NAME).c
+APP_OBJ = $(BUILD_DIR)/$(APP_NAME).o
+APP_EXE = $(BUILD_DIR)/$(APP_NAME).exe
 
-# Target executable
-TARGET = calculator
+# ============================================================================
+# BUILD RULES
+# ============================================================================
 
-# Build the calculator
-$(TARGET): $(ALL_OBJS)
-	$(CC) $(CFLAGS) -o $@ $^
-	@echo "Calculator built! Run with: ./$(TARGET)"
+# Default target - build the specified app
+all: $(APP_EXE)
+	@echo "✓ Built $(APP_NAME).exe successfully!"
+	@echo "  Location: $(BUILD_DIR)/$(APP_NAME).exe"
+	@echo "  Run with: make run"
 
-# Compile source files to object files
-%.o: %.c
+# Create build directory
+$(BUILD_DIR):
+	@mkdir -p $(BUILD_DIR)
+
+# Build the application executable
+$(APP_EXE): $(APP_OBJ) $(LIB_OBJS) | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -o $@ $(APP_OBJ) $(LIB_OBJS)
+
+# Compile application source
+$(BUILD_DIR)/%.o: %.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Clean build artifacts
+# Compile server library sources
+$(BUILD_DIR)/%.o: ../server/%.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# ============================================================================
+# RUN TARGET
+# ============================================================================
+
+# Run the built application
+run: $(APP_EXE)
+	@echo "Running $(APP_NAME).exe..."
+	@$(APP_EXE)
+
+# ============================================================================
+# CLEAN TARGETS
+# ============================================================================
+
+# Clean all build artifacts
 clean:
-	rm -f $(ALL_OBJS) $(TARGET)
-	@echo "Clean complete!"
+	rm -rf $(BUILD_DIR)
+	@echo "✓ Clean complete! (removed $(BUILD_DIR)/)"
+
+# ============================================================================
+# TEST TARGETS
+# ============================================================================
 
 # Test the calculator
-test: $(TARGET)
-	@echo "Testing calculator endpoints..."
-	@echo "Starting server in background..."
-	@./$(TARGET) &
-	@SERVER_PID=$$!; \
-	sleep 2; \
-	echo "Addition (5 + 3):"; \
-	curl -s "http://localhost:8080/add?a=5&b=3" | head -1; \
-	echo ""; \
-	echo "Addition (100 + 200):"; \
-	curl -s "http://localhost:8080/add?a=100&b=200" | head -1; \
-	echo ""; \
-	echo "Error test (missing parameter):"; \
-	curl -s "http://localhost:8080/add?a=5" | head -1; \
-	echo ""; \
-	kill $$SERVER_PID 2>/dev/null || true
+test: $(APP_EXE)
+	@if [ "$(APP_NAME)" = "calculator" ]; then \
+		echo "Testing calculator endpoints..."; \
+		echo "Starting server in background..."; \
+		$(APP_EXE) & \
+		SERVER_PID=$$!; \
+		sleep 2; \
+		echo "Addition (5 + 3):"; \
+		curl -s "http://localhost:8080/add?a=5&b=3" | head -1; \
+		echo ""; \
+		echo "Addition (100 + 200):"; \
+		curl -s "http://localhost:8080/add?a=100&b=200" | head -1; \
+		echo ""; \
+		echo "Error test (missing parameter):"; \
+		curl -s "http://localhost:8080/add?a=5" | head -1; \
+		echo ""; \
+		kill $$SERVER_PID 2>/dev/null || true; \
+	else \
+		echo "No tests defined for $(APP_NAME)"; \
+	fi
 
-.PHONY: clean test
+# ============================================================================
+# HELP
+# ============================================================================
+
+help:
+	@echo "Usage:"
+	@echo "  make APP_NAME=<name>     - Build specific app (default: calculator)"
+	@echo "  make run                 - Run the built application"
+	@echo "  make test                - Run tests for the application"
+	@echo "  make clean               - Remove all build artifacts"
+	@echo ""
+	@echo "Examples:"
+	@echo "  make APP_NAME=calculator - Build calculator.exe"
+	@echo "  make APP_NAME=sound_gen  - Build sound_gen.exe"
+	@echo "  make run                 - Run the current app"
+	@echo ""
+	@echo "Current app: $(APP_NAME)"
+	@echo "Output: $(BUILD_DIR)/$(APP_NAME).exe"
+
+.PHONY: all run clean test help

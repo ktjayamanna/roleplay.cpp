@@ -71,13 +71,65 @@ int main() {
 
 ## Building and Running
 
+The Makefile uses a simple swap-and-build approach. Change `APP_NAME` to build different applications.
+
+### Quick Start
+
 ```bash
-# Build the calculator
+# Build the default app (calculator)
 make
 
-# Run the server
-./calculator
+# Build a specific app by swapping APP_NAME
+make APP_NAME=sound_gen
+
+# Run the built app
+make run
+
+# Run with a specific app
+make APP_NAME=calculator run
+
+# Run tests
+make APP_NAME=calculator test
+
+# Clean all build artifacts
+make clean
 ```
+
+### Available Commands
+
+| Command | Description |
+|---------|-------------|
+| `make` | Build default app (calculator) |
+| `make APP_NAME=<name>` | Build specific app |
+| `make run` | Run the built application |
+| `make test` | Run tests for the application |
+| `make clean` | Remove all build artifacts |
+| `make help` | Show all available commands |
+
+### Build Directory
+
+All build artifacts (`.o` files and `.exe` files) are stored in the `build/` directory:
+- `build/calculator.exe` - Compiled calculator application
+- `build/sound_gen.exe` - Compiled sound generator application
+- `build/*.o` - Intermediate object files
+
+This keeps the main directory clean with only source files.
+
+### Adding New Examples
+
+To add a new example application:
+
+1. Create your source file (e.g., `my_app.c`) in the `examples/` directory
+2. Build it:
+   ```bash
+   make APP_NAME=my_app
+   ```
+3. Run it:
+   ```bash
+   make run
+   ```
+
+That's it! No need to modify the Makefile. All executables are built with `.exe` extension in the `build/` folder.
 
 ## Testing the API
 
