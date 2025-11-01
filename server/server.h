@@ -1,25 +1,4 @@
-/*
- * server.h - Simple HTTP Server Library
- *
- * This library allows you to easily create HTTP endpoints by simply
- * including this header and registering your functions as endpoints.
- *
- * USAGE:
- * 1. #include "server.h"
- * 2. Call server_init(port) to initialize
- * 3. Register endpoints with server_register_*() functions
- * 4. Call server_start() to begin serving requests
- *
- * EXAMPLE:
- *   #include "server.h"
- *
- *   int main() {
- *       server_init(8080);
- *       server_register_simple("/health", "GET", "{\"status\": \"ok\"}");
- *       server_start();
- *       return 0;
- *   }
- */
+// server.h - Core server header
 
 #ifndef SERVER_H
 #define SERVER_H
