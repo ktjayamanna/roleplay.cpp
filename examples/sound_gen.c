@@ -9,12 +9,11 @@ EndpointResponse* serve_music(const RequestContext* request) {
 }
 
 EndpointResponse* serve_json(const RequestContext* request) {
-    // Test that text responses still work!
     return endpoint_json_response(200, "{\"message\": \"Hello, World!\"}");
 }
 
 int main() {
-    int port = 8888;  // Using 8888 to avoid port conflicts
+    int port = 8888;
     if (server_init(port) != 0) {
         fprintf(stderr, "Failed to initialize server\n");
         return 1;

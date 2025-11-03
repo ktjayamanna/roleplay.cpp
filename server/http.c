@@ -1,13 +1,9 @@
-/*
- * http.c - HTTP protocol handling implementation
- */
-
-#define _GNU_SOURCE  // For strcasestr
+#define _GNU_SOURCE
 #include "http.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>  // For strcasecmp
+#include <strings.h>
 
 HttpResponse* http_build_response(int status_code, const char* body) {
     const char* status_text = (status_code == 200) ?  "OK" : "NOT FOUND";
@@ -34,44 +30,35 @@ HttpResponse* http_build_response(int status_code, const char* body) {
     return response;
 }
 
-// This function builds an HTTP response with binary data
 HttpResponse* http_build_binary_response(int status_code, const void* body,
                                         size_t body_length, const char* content_type) {
-    // STEP 1: Get status text
-      const char* status_text = "OK";
-      if (status_code == 404) status_text = "Not Found";
-      else if (status_code == 500) status_text = "Internal Server Error";
-      // Add more status codes as needed
+    const char* status_text = "OK";
+    if (status_code == 404) status_text = "Not Found";
+    else if (status_code == 500) status_text = "Internal Server Error";
 
-    // STEP 2: Build HTTP headers (without body)
-      const char* header_format = "HTTP/1.1 %d %s\r\n"
-                                 "Content-Type: %s\r\n"
-                                 "Content-Length: %zu\r\n"
-                                 "Connection: close\r\n"
-                                 "\r\n";
-    
-      int header_length = snprintf(NULL, 0, header_format,
-          status_code, status_text, content_type, body_length);
+    const char* header_format = "HTTP/1.1 %d %s\r\n"
+                               "Content-Type: %s\r\n"
+                               "Content-Length: %zu\r\n"
+                               "Connection: close\r\n"
+                               "\r\n";
 
-    // STEP 3: Allocate buffer for headers + body
-      size_t total_length = header_length + body_length;
-      char* response_buffer = malloc(total_length);
-      if (!response_buffer) return NULL;
+    int header_length = snprintf(NULL, 0, header_format,
+        status_code, status_text, content_type, body_length);
 
-    // STEP 4: Write headers to buffer
-      int written = sprintf(response_buffer, header_format,
-          status_code, status_text, content_type, body_length);
+    size_t total_length = header_length + body_length;
+    char* response_buffer = malloc(total_length);
+    if (!response_buffer) return NULL;
 
-    // STEP 5: Copy binary body after headers
-      memcpy(response_buffer + written, body, body_length);
-      // NOTE: Use memcpy, NOT strcat! Binary data may contain null bytes.
+    int written = sprintf(response_buffer, header_format,
+        status_code, status_text, content_type, body_length);
 
-    // STEP 6: Create and return HttpResponse
-      HttpResponse* response = malloc(sizeof(HttpResponse));
-      response->status_code = status_code;
-      response->body = response_buffer;
-      response->body_length = total_length;
-      return response;
+    memcpy(response_buffer + written, body, body_length);
+
+    HttpResponse* response = malloc(sizeof(HttpResponse));
+    response->status_code = status_code;
+    response->body = response_buffer;
+    response->body_length = total_length;
+    return response;
 }
 
 
@@ -79,7 +66,6 @@ void http_parse_request(const char* request, char* method, char* path) {
     sscanf(request, "%s %s", method, path);
 }
 
-// Find a header value in the HTTP request
 const char* http_get_header(const char* request, const char* header_name) {
     static char header_value[512];
     char search_pattern[128];
@@ -90,21 +76,17 @@ const char* http_get_header(const char* request, const char* header_name) {
         return NULL;
     }
 
-    // Move past the header name and colon
     header_start += strlen(search_pattern);
 
-    // Skip whitespace
     while (*header_start == ' ' || *header_start == '\t') {
         header_start++;
     }
 
-    // Find end of line
     const char* header_end = strstr(header_start, "\r\n");
     if (!header_end) {
         header_end = header_start + strlen(header_start);
     }
 
-    // Copy header value
     size_t len = header_end - header_start;
     if (len >= sizeof(header_value)) {
         len = sizeof(header_value) - 1;
@@ -115,7 +97,6 @@ const char* http_get_header(const char* request, const char* header_name) {
     return header_value;
 }
 
-// Get Content-Length from request
 int http_get_content_length(const char* request) {
     const char* content_length = http_get_header(request, "Content-Length");
     if (content_length) {
@@ -124,7 +105,6 @@ int http_get_content_length(const char* request) {
     return 0;
 }
 
-// Get Content-Type from request
 void http_get_content_type(const char* request, char* content_type, size_t max_len) {
     const char* ct = http_get_header(request, "Content-Type");
     if (ct) {
@@ -135,11 +115,10 @@ void http_get_content_type(const char* request, char* content_type, size_t max_l
     }
 }
 
-// Find the body in an HTTP request (after headers)
 const char* http_find_body(const char* request) {
     const char* body_start = strstr(request, "\r\n\r\n");
     if (body_start) {
-        return body_start + 4;  // Skip past \r\n\r\n
+        return body_start + 4;
     }
     return NULL;
 }
