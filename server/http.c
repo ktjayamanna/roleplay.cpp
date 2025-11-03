@@ -2,10 +2,12 @@
  * http.c - HTTP protocol handling implementation
  */
 
+#define _GNU_SOURCE  // For strcasestr
 #include "http.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>  // For strcasecmp
 
 HttpResponse* http_build_response(int status_code, const char* body) {
     const char* status_text = (status_code == 200) ?  "OK" : "NOT FOUND";
@@ -75,5 +77,70 @@ HttpResponse* http_build_binary_response(int status_code, const void* body,
 
 void http_parse_request(const char* request, char* method, char* path) {
     sscanf(request, "%s %s", method, path);
+}
+
+// Find a header value in the HTTP request
+const char* http_get_header(const char* request, const char* header_name) {
+    static char header_value[512];
+    char search_pattern[128];
+    snprintf(search_pattern, sizeof(search_pattern), "%s:", header_name);
+
+    const char* header_start = strcasestr(request, search_pattern);
+    if (!header_start) {
+        return NULL;
+    }
+
+    // Move past the header name and colon
+    header_start += strlen(search_pattern);
+
+    // Skip whitespace
+    while (*header_start == ' ' || *header_start == '\t') {
+        header_start++;
+    }
+
+    // Find end of line
+    const char* header_end = strstr(header_start, "\r\n");
+    if (!header_end) {
+        header_end = header_start + strlen(header_start);
+    }
+
+    // Copy header value
+    size_t len = header_end - header_start;
+    if (len >= sizeof(header_value)) {
+        len = sizeof(header_value) - 1;
+    }
+    strncpy(header_value, header_start, len);
+    header_value[len] = '\0';
+
+    return header_value;
+}
+
+// Get Content-Length from request
+int http_get_content_length(const char* request) {
+    const char* content_length = http_get_header(request, "Content-Length");
+    if (content_length) {
+        return atoi(content_length);
+    }
+    return 0;
+}
+
+// Get Content-Type from request
+void http_get_content_type(const char* request, char* content_type, size_t max_len) {
+    const char* ct = http_get_header(request, "Content-Type");
+    if (ct) {
+        strncpy(content_type, ct, max_len - 1);
+        content_type[max_len - 1] = '\0';
+    } else {
+        content_type[0] = '\0';
+    }
+}
+
+// Find the body in an HTTP request (after headers)
+const char* http_find_body(const char* request) {
+    const char* body_start = strstr(request, "\r\n\r\n");
+    if (body_start) {
+        return body_start + 4;  // Skip past \r\n\r\n
+    }
+    return NULL;
 }
 

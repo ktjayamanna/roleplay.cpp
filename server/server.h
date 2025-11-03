@@ -32,15 +32,7 @@ typedef struct RequestContext {
     int body_length;
     RequestParam params[MAX_PARAMS]; // Query parameters and URL parameters
     int param_count;
-
-    // TODO: PHASE 2 - Add request content type tracking
-    // Add the following field to track incoming content type:
-    // - char content_type[128];   // Content-Type header from request (e.g., "application/octet-stream")
-    //
-    // RATIONALE:
-    // - Handlers need to know if incoming data is JSON, binary, multipart, etc.
-    // - This allows proper parsing of request body based on content type
-    // - Future: Can be used for multipart/form-data file upload parsing
+    char content_type[128];        // Content-Type header from request
 } RequestContext;
 
 // Response structure returned by endpoint handlers
@@ -98,6 +90,22 @@ EndpointResponse* response_text(int status_code, const char* text_body);
 
 // Create an error response
 EndpointResponse* response_error(int status_code, const char* error_message);
+
+// ============================================================================
+// FILE UPLOAD SUPPORT
+// ============================================================================
+
+// Structure representing an uploaded file
+typedef struct {
+    char filename[256];
+    char content_type[128];
+    const char* data;
+    size_t size;
+} UploadedFile;
+
+// Parse multipart/form-data file upload from request
+// Returns 0 on success, -1 on error
+int parse_multipart_file(const RequestContext* request, UploadedFile* file);
 
 // ============================================================================
 // CONVENIENCE MACROS

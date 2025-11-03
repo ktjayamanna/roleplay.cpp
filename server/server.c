@@ -122,15 +122,15 @@ static void parse_url(const char* url, char* path, char* query_string) {
     }
 }
 
-HttpResponse* handle_route(char* method, char* url) {
+HttpResponse* handle_route_with_body(char* method, char* url, const char* content_type, char* body, int body_length) {
     char path[256];
     char query_string[512];
 
     // Parse URL into path and query string
     parse_url(url, path, query_string);
 
-    // Dispatch to endpoint system
-    EndpointResponse* endpoint_response = endpoint_dispatch(method, path, query_string, NULL, 0);
+    // Dispatch to endpoint system with body and content type
+    EndpointResponse* endpoint_response = endpoint_dispatch_with_body(method, path, query_string, content_type, body, body_length);
 
     if (endpoint_response) {
         // Build HTTP response using the binary response builder
@@ -154,19 +154,65 @@ HttpResponse* handle_route(char* method, char* url) {
 }
 
 static void handle_client(int client_fd) {
-    char buffer[1024];
-    ssize_t bytes_read = read(client_fd, buffer, sizeof(buffer) - 1);
+    // Initial buffer for headers
+    char header_buffer[4096];
+    ssize_t bytes_read = read(client_fd, header_buffer, sizeof(header_buffer) - 1);
     if (bytes_read <= 0) {
         return;
     }
-    buffer[bytes_read] = '\0';
-    char method[10], url[256];
-    http_parse_request(buffer, method, url);
+    header_buffer[bytes_read] = '\0';
 
-    HttpResponse* response = handle_route(method, url);
+    // Parse method and URL
+    char method[10], url[256];
+    http_parse_request(header_buffer, method, url);
+
+    // Get content type and length
+    char content_type[128];
+    http_get_content_type(header_buffer, content_type, sizeof(content_type));
+    int content_length = http_get_content_length(header_buffer);
+
+    // Find where body starts in the buffer
+    const char* body_in_buffer = http_find_body(header_buffer);
+    char* body = NULL;
+    int body_length = 0;
+
+    if (content_length > 0 && body_in_buffer) {
+        // Calculate how much body we already have
+        int body_already_read = bytes_read - (body_in_buffer - header_buffer);
+
+        // Allocate buffer for complete body
+        body = malloc(content_length);
+        if (!body) {
+            return;
+        }
+
+        // Copy what we already have
+        memcpy(body, body_in_buffer, body_already_read);
+
+        // Read remaining body if needed
+        int remaining = content_length - body_already_read;
+        if (remaining > 0) {
+            int total_read = 0;
+            while (total_read < remaining) {
+                ssize_t additional = read(client_fd, body + body_already_read + total_read, remaining - total_read);
+                if (additional <= 0) {
+                    free(body);
+                    return;
+                }
+                total_read += additional;
+            }
+        }
+        body_length = content_length;
+    }
+
+    HttpResponse* response = handle_route_with_body(method, url, content_type, body, body_length);
     write(client_fd, response->body, response->body_length);
+
     free(response->body);
     free(response);
+    if (body) {
+        free(body);
+    }
 }
 
 // ============================================================================

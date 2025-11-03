@@ -91,14 +91,19 @@ static void parse_query_string(const char* query_string, RequestContext* context
 
 // Dispatch request to appropriate endpoint
 EndpointResponse* endpoint_dispatch(const char* method_str, const char* path, const char* query_string, const char* body, int body_length) {
+    return endpoint_dispatch_with_body(method_str, path, query_string, "", body, body_length);
+}
+
+// Dispatch request with content type to appropriate endpoint
+EndpointResponse* endpoint_dispatch_with_body(const char* method_str, const char* path, const char* query_string, const char* content_type, const char* body, int body_length) {
     HttpMethod method = parse_method(method_str);
-    
+
     // Find matching endpoint
     for (int i = 0; i < MAX_ENDPOINTS; i++) {
-        if (endpoint_registry[i].is_active && 
+        if (endpoint_registry[i].is_active &&
             endpoint_registry[i].method == method &&
             strcmp(endpoint_registry[i].path, path) == 0) {
-            
+
             // Build request context
             RequestContext context;
             context.method = method;
@@ -106,15 +111,17 @@ EndpointResponse* endpoint_dispatch(const char* method_str, const char* path, co
             context.path[MAX_PATH_LENGTH - 1] = '\0';
             context.body = (char*)body;
             context.body_length = body_length;
-            
+            strncpy(context.content_type, content_type ? content_type : "", sizeof(context.content_type) - 1);
+            context.content_type[sizeof(context.content_type) - 1] = '\0';
+
             // Parse query parameters
             parse_query_string(query_string, &context);
-            
+
             // Call the handler
             return endpoint_registry[i].handler(&context);
         }
     }
-    
+
     // No matching endpoint found
     return endpoint_error_response(404, "Endpoint not found");
 }
@@ -243,4 +250,99 @@ EndpointResponse* endpoint_file_response(int status_code, const char* file_path)
       EndpointResponse* response = endpoint_binary_response(status_code, file_data, bytes_read, content_type);
       free(file_data);  // endpoint_binary_response makes a copy
       return response;
+}
+
+// Parse multipart/form-data file upload
+int parse_multipart_file(const RequestContext* request, UploadedFile* file) {
+    if (!request || !file || !request->body || request->body_length == 0) {
+        return -1;
+    }
+
+    // Extract boundary from Content-Type header
+    // Format: "multipart/form-data; boundary=----WebKitFormBoundary..."
+    const char* boundary_start = strstr(request->content_type, "boundary=");
+    if (!boundary_start) {
+        return -1;
+    }
+    boundary_start += 9; // Skip "boundary="
+
+    char boundary[256];
+    snprintf(boundary, sizeof(boundary), "--%s", boundary_start);
+
+    // Find first boundary
+    const char* part_start = strstr(request->body, boundary);
+    if (!part_start) {
+        return -1;
+    }
+    part_start += strlen(boundary);
+
+    // Skip to headers
+    if (*part_start == '\r') part_start++;
+    if (*part_start == '\n') part_start++;
+
+    // Parse Content-Disposition header to get filename
+    const char* disposition = strstr(part_start, "Content-Disposition:");
+    if (!disposition) {
+        return -1;
+    }
+
+    const char* filename_start = strstr(disposition, "filename=\"");
+    if (filename_start) {
+        filename_start += 10; // Skip 'filename="'
+        const char* filename_end = strchr(filename_start, '"');
+        if (filename_end) {
+            size_t filename_len = filename_end - filename_start;
+            if (filename_len >= sizeof(file->filename)) {
+                filename_len = sizeof(file->filename) - 1;
+            }
+            strncpy(file->filename, filename_start, filename_len);
+            file->filename[filename_len] = '\0';
+        }
+    }
+
+    // Parse Content-Type header for the file
+    const char* file_content_type = strstr(part_start, "Content-Type:");
+    if (file_content_type) {
+        file_content_type += 13; // Skip "Content-Type:"
+        while (*file_content_type == ' ') file_content_type++;
+
+        const char* ct_end = strstr(file_content_type, "\r\n");
+        if (ct_end) {
+            size_t ct_len = ct_end - file_content_type;
+            if (ct_len >= sizeof(file->content_type)) {
+                ct_len = sizeof(file->content_type) - 1;
+            }
+            strncpy(file->content_type, file_content_type, ct_len);
+            file->content_type[ct_len] = '\0';
+        }
+    }
+
+    // Find the blank line that separates headers from body
+    const char* file_data_start = strstr(part_start, "\r\n\r\n");
+    if (!file_data_start) {
+        return -1;
+    }
+    file_data_start += 4; // Skip \r\n\r\n
+
+    // Find the ending boundary
+    // Use memmem instead of strstr because file data may contain null bytes
+    char end_boundary[256];
+    snprintf(end_boundary, sizeof(end_boundary), "\r\n%s", boundary);
+
+    size_t search_len = request->body_length - (file_data_start - request->body);
+    const char* file_data_end = memmem(file_data_start, search_len, end_boundary, strlen(end_boundary));
+
+    if (!file_data_end) {
+        // Try without \r\n prefix
+        file_data_end = memmem(file_data_start, search_len, boundary, strlen(boundary));
+        if (!file_data_end) {
+            return -1;
+        }
+    }
+
+    // Set file data and size
+    file->data = file_data_start;
+    file->size = file_data_end - file_data_start;
+
+    return 0;
 }

@@ -36,6 +36,7 @@ extern int endpoint_count;
 void endpoint_system_init(void);
 int endpoint_register(const char* path, HttpMethod method, EndpointHandler handler);
 EndpointResponse* endpoint_dispatch(const char* method_str, const char* path, const char* query_string, const char* body, int body_length);
+EndpointResponse* endpoint_dispatch_with_body(const char* method_str, const char* path, const char* query_string, const char* content_type, const char* body, int body_length);
 void endpoint_response_free(EndpointResponse* response);
 
 // Utility functions for handlers
@@ -51,4 +52,5 @@ EndpointResponse* endpoint_binary_response(int status_code, const void* data,
                                           size_t data_length, const char* content_type);
 
 EndpointResponse* endpoint_file_response(int status_code, const char* file_path);
+
 #endif
