@@ -18,10 +18,10 @@ int main() {
         fprintf(stderr, "Failed to initialize server\n");
         return 1;
     }
-    server_register_handler("/music.mp3", "GET", serve_music);
+    server_register_handler("/ezio_family", "GET", serve_music);
     server_register_handler("/api/hello", "GET", serve_json);
     printf("Server running on http://localhost:8080\n");
-    printf("  - Binary: http://localhost:8080/music.mp3\n");
+    printf("  - Binary: http://localhost:8080/ezio_family\n");
     printf("  - JSON:   http://localhost:8080/api/hello\n");
     server_start();
     return 0;
