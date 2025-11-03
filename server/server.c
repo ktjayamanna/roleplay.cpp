@@ -71,8 +71,6 @@ int server_init(int port) {
     return 0;
 }
 
-// TODO: Implement server_start()
-
 int server_start() {
     server.is_running = 1;
     while (server.is_running) {
@@ -88,8 +86,6 @@ int server_start() {
     }
     return 0;
 }
-
-// TODO: Implement server_stop()
 
 void server_stop() {
     server.is_running = 0;
@@ -125,18 +121,13 @@ char* handle_route(char* method, char* url) {
     EndpointResponse* endpoint_response = endpoint_dispatch(method, path, query_string, NULL, 0);
 
     if (endpoint_response) {
-        // TODO: PHASE 1 - Use unified binary response builder
-        // Replace the old http_build_response with the new one that handles all data:
-        //
-        // HttpResponse* http_response = http_build_binary_response(
-        //     endpoint_response->status_code,
-        //     endpoint_response->body,
-        //     endpoint_response->body_length,
-        //     endpoint_response->content_type
-        // );
-        //
-        // NOTE: No need to check is_binary flag - one function handles everything!
-        // The body_length field tells us exactly how many bytes to send.
+        // Build HTTP response using the new binary response builder
+        HttpResponse* http_response = http_build_binary_response(
+            endpoint_response->status_code,
+            endpoint_response->body,
+            endpoint_response->body_length,
+            endpoint_response->content_type
+        );
 
         // Build HTTP response using the existing http_build_response function
         HttpResponse* http_response = http_build_response(endpoint_response->status_code, endpoint_response->body);
@@ -158,8 +149,6 @@ char* handle_route(char* method, char* url) {
     }
 }
 
-// TODO: Implement handle_client()
-
 static void handle_client(int client_fd) {
     char buffer[1024];
     ssize_t bytes_read = read(client_fd, buffer, sizeof(buffer) - 1);
@@ -169,25 +158,11 @@ static void handle_client(int client_fd) {
     buffer[bytes_read] = '\0';
     char method[10], url[256];
     http_parse_request(buffer, method, url);
-    char* response = handle_route(method, url);
 
-    // TODO: PHASE 1 - Use HttpResponse directly for proper length tracking
-    // PROBLEM: strlen(response) doesn't work for binary data (stops at first null byte)
-    // SOLUTION: Change handle_route to return HttpResponse* instead of char*
-    //
-    // STEP 1: Change handle_route signature:
-    //   HttpResponse* handle_route(char* method, char* url);
-    //
-    // STEP 2: Update handle_route to return http_response directly (don't strdup)
-    //
-    // STEP 3: Update this code to:
-    //   HttpResponse* response = handle_route(method, url);
-    //   write(client_fd, response->body, response->body_length);
-    //   free(response->body);
-    //   free(response);
-    //
-    // BENEFIT: Works for both text and binary - body_length is always correct!
-
+      HttpResponse* response = handle_route(method, url);
+      write(client_fd, response->body, response->body_length);
+      free(response->body);
+      free(response);
     write(client_fd, response, strlen(response));
     free(response);
 }
