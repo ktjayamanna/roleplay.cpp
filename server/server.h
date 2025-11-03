@@ -46,16 +46,7 @@ typedef struct EndpointResponse {
     int status_code;
     void* body;                    // Response body (handler must allocate) - void* to handle both text and binary
     char* content_type;           // Content type (e.g., "application/json", "audio/mpeg", "image/png")
-
-    // TODO: PHASE 1 - Add body length field
-    // Add this field to track exact size of response body:
-    // - size_t body_length;      // Length of body in bytes (works for both text and binary)
-    //
-    // RATIONALE:
-    // - Always track exact byte count - works for both text (with \0) and binary data
-    // - No need for is_binary flag - body_length handles everything
-    // - HTTP Content-Length header requires exact byte count anyway
-    // - Simpler, unified approach: all responses are just "data + length"
+    size_t body_length;            // Length of body in bytes (works for both text and binary)
 } EndpointResponse;
 
 // Function pointer type for endpoint handlers
