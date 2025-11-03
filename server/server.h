@@ -44,18 +44,18 @@ typedef struct RequestContext {
 // Response structure returned by endpoint handlers
 typedef struct EndpointResponse {
     int status_code;
-    char* body;                    // Response body (handler must allocate)
-    char* content_type;           // Content type (optional, defaults to application/json)
+    void* body;                    // Response body (handler must allocate) - void* to handle both text and binary
+    char* content_type;           // Content type (e.g., "application/json", "audio/mpeg", "image/png")
 
-    // TODO: PHASE 1 - Add binary file support fields
-    // Add the following fields to support binary responses:
-    // - size_t body_length;      // Length of body in bytes (important for binary data)
-    // - int is_binary;            // Flag: 1 for binary data, 0 for text (affects null-termination handling)
+    // TODO: PHASE 1 - Add body length field
+    // Add this field to track exact size of response body:
+    // - size_t body_length;      // Length of body in bytes (works for both text and binary)
     //
     // RATIONALE:
-    // - Text responses can use strlen(), but binary data may contain null bytes
-    // - is_binary flag tells the HTTP layer whether to treat body as string or raw bytes
-    // - This maintains backward compatibility (existing text responses still work)
+    // - Always track exact byte count - works for both text (with \0) and binary data
+    // - No need for is_binary flag - body_length handles everything
+    // - HTTP Content-Length header requires exact byte count anyway
+    // - Simpler, unified approach: all responses are just "data + length"
 } EndpointResponse;
 
 // Function pointer type for endpoint handlers

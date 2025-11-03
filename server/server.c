@@ -125,22 +125,18 @@ char* handle_route(char* method, char* url) {
     EndpointResponse* endpoint_response = endpoint_dispatch(method, path, query_string, NULL, 0);
 
     if (endpoint_response) {
-        // TODO: PHASE 1 - Handle binary responses
-        // Replace the http_build_response call with logic that checks is_binary flag:
+        // TODO: PHASE 1 - Use unified binary response builder
+        // Replace the old http_build_response with the new one that handles all data:
         //
-        // HttpResponse* http_response;
-        // if (endpoint_response->is_binary) {
-        //     // Use binary response builder
-        //     http_response = http_build_binary_response(
-        //         endpoint_response->status_code,
-        //         endpoint_response->body,
-        //         endpoint_response->body_length,
-        //         endpoint_response->content_type
-        //     );
-        // } else {
-        //     // Use text response builder (existing code)
-        //     http_response = http_build_response(endpoint_response->status_code, endpoint_response->body);
-        // }
+        // HttpResponse* http_response = http_build_binary_response(
+        //     endpoint_response->status_code,
+        //     endpoint_response->body,
+        //     endpoint_response->body_length,
+        //     endpoint_response->content_type
+        // );
+        //
+        // NOTE: No need to check is_binary flag - one function handles everything!
+        // The body_length field tells us exactly how many bytes to send.
 
         // Build HTTP response using the existing http_build_response function
         HttpResponse* http_response = http_build_response(endpoint_response->status_code, endpoint_response->body);
@@ -175,26 +171,22 @@ static void handle_client(int client_fd) {
     http_parse_request(buffer, method, url);
     char* response = handle_route(method, url);
 
-    // TODO: PHASE 1 - Fix binary response transmission
+    // TODO: PHASE 1 - Use HttpResponse directly for proper length tracking
     // PROBLEM: strlen(response) doesn't work for binary data (stops at first null byte)
-    // SOLUTION: handle_route needs to return both response string AND length
+    // SOLUTION: Change handle_route to return HttpResponse* instead of char*
     //
-    // OPTION 1: Change handle_route signature to return a struct:
-    //   typedef struct {
-    //       char* data;
-    //       size_t length;
-    //   } ResponseData;
-    //   ResponseData handle_route(...);
+    // STEP 1: Change handle_route signature:
+    //   HttpResponse* handle_route(char* method, char* url);
     //
-    // OPTION 2: Add output parameter:
-    //   char* handle_route(char* method, char* url, size_t* out_length);
+    // STEP 2: Update handle_route to return http_response directly (don't strdup)
     //
-    // OPTION 3: Store length in HttpResponse and return that instead of char*
-    //   HttpResponse* handle_route(...);
-    //
-    // For now, OPTION 3 is recommended (cleanest, already have HttpResponse struct)
-    // Then change this to:
+    // STEP 3: Update this code to:
+    //   HttpResponse* response = handle_route(method, url);
     //   write(client_fd, response->body, response->body_length);
+    //   free(response->body);
+    //   free(response);
+    //
+    // BENEFIT: Works for both text and binary - body_length is always correct!
 
     write(client_fd, response, strlen(response));
     free(response);

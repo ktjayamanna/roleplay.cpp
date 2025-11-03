@@ -141,10 +141,12 @@ EndpointResponse* endpoint_create_response(int status_code, const char* body, co
     response->body = body ? strdup(body) : NULL;
     response->content_type = content_type ? strdup(content_type) : strdup("application/json");
 
-    // TODO: PHASE 1 - Initialize binary fields
-    // Add these lines after setting content_type:
+    // TODO: PHASE 1 - Set body_length for text responses
+    // Add this line after setting content_type:
     //   response->body_length = body ? strlen(body) : 0;
-    //   response->is_binary = 0;  // Text response by default
+    //
+    // NOTE: This function is for TEXT responses (uses strdup/strlen)
+    // For binary data, use endpoint_binary_response() instead
 
     return response;
 }
@@ -183,7 +185,7 @@ EndpointResponse* endpoint_error_response(int status_code, const char* error_mes
 }
 
 // TODO: PHASE 1 - Implement endpoint_binary_response()
-// This function creates a response containing binary data
+// This function creates a response containing binary data (or any raw data with known length)
 //
 // EndpointResponse* endpoint_binary_response(int status_code, const void* data,
 //                                           size_t data_length, const char* content_type) {
@@ -194,14 +196,13 @@ EndpointResponse* endpoint_error_response(int status_code, const char* error_mes
 //     // STEP 2: Set status code
 //     //   response->status_code = status_code;
 //
-//     // STEP 3: Allocate and copy binary data
+//     // STEP 3: Allocate and copy data (works for both binary and text)
 //     //   response->body = malloc(data_length);
 //     //   if (!response->body) { free(response); return NULL; }
-//     //   memcpy(response->body, data, data_length);  // Use memcpy for binary data!
+//     //   memcpy(response->body, data, data_length);  // memcpy works for everything!
 //
-//     // STEP 4: Set binary-specific fields
+//     // STEP 4: Set body length
 //     //   response->body_length = data_length;
-//     //   response->is_binary = 1;
 //
 //     // STEP 5: Set content type
 //     //   response->content_type = strdup(content_type);
