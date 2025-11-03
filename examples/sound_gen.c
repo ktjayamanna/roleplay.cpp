@@ -5,7 +5,7 @@
 #include "../server/endpoint.h"
 
 EndpointResponse* serve_music(const RequestContext* request) {
-    return endpoint_file_response(200, "examples/music.mp3");
+    return endpoint_file_response(200, "music.mp3");
 }
 
 EndpointResponse* serve_json(const RequestContext* request) {
@@ -14,7 +14,10 @@ EndpointResponse* serve_json(const RequestContext* request) {
 }
 
 int main() {
-    server_init(8080);
+    if (server_init(8080) != 0) {
+        fprintf(stderr, "Failed to initialize server\n");
+        return 1;
+    }
     server_register_handler("/music.mp3", "GET", serve_music);
     server_register_handler("/api/hello", "GET", serve_json);
     printf("Server running on http://localhost:8080\n");

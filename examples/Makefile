@@ -12,7 +12,7 @@ LIB_OBJS = $(patsubst ../server/%.c,$(BUILD_DIR)/%.o,$(LIB_SRCS))
 # ============================================================================
 # APP CONFIGURATION - Change APP_NAME to build different apps
 # ============================================================================
-APP_NAME ?= calculator
+APP_NAME ?= sound_gen
 
 # Application source and output
 APP_SRC = $(APP_NAME).c
