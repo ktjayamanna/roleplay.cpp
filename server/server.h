@@ -3,6 +3,8 @@
 #ifndef SERVER_H
 #define SERVER_H
 
+#include <stddef.h>  // For size_t
+
 // Maximum number of parameters in a request
 #define MAX_PARAM_LENGTH 128
 #define MAX_PARAMS 10

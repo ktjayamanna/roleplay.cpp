@@ -110,7 +110,7 @@ static void parse_url(const char* url, char* path, char* query_string) {
     }
 }
 
-char* handle_route(char* method, char* url) {
+HttpResponse* handle_route(char* method, char* url) {
     char path[256];
     char query_string[512];
 
@@ -121,7 +121,7 @@ char* handle_route(char* method, char* url) {
     EndpointResponse* endpoint_response = endpoint_dispatch(method, path, query_string, NULL, 0);
 
     if (endpoint_response) {
-        // Build HTTP response using the new binary response builder
+        // Build HTTP response using the binary response builder
         HttpResponse* http_response = http_build_binary_response(
             endpoint_response->status_code,
             endpoint_response->body,
@@ -129,23 +129,15 @@ char* handle_route(char* method, char* url) {
             endpoint_response->content_type
         );
 
-        // Build HTTP response using the existing http_build_response function
-        HttpResponse* http_response = http_build_response(endpoint_response->status_code, endpoint_response->body);
-        char* response_str = strdup(http_response->body);
-
-        // Clean up
+        // Clean up endpoint response
         endpoint_response_free(endpoint_response);
-        free(http_response->body);
-        free(http_response);
 
-        return response_str;
+        return http_response;
     } else {
         // No endpoint found - return 404
-        HttpResponse* http_response = http_build_response(404, "{\"error\": \"Endpoint not found\"}");
-        char* response_str = strdup(http_response->body);
-        free(http_response->body);
-        free(http_response);
-        return response_str;
+        const char* error_body = "{\"error\": \"Endpoint not found\"}";
+        HttpResponse* http_response = http_build_binary_response(404, error_body, strlen(error_body), "application/json");
+        return http_response;
     }
 }
 
@@ -159,11 +151,9 @@ static void handle_client(int client_fd) {
     char method[10], url[256];
     http_parse_request(buffer, method, url);
 
-      HttpResponse* response = handle_route(method, url);
-      write(client_fd, response->body, response->body_length);
-      free(response->body);
-      free(response);
-    write(client_fd, response, strlen(response));
+    HttpResponse* response = handle_route(method, url);
+    write(client_fd, response->body, response->body_length);
+    free(response->body);
     free(response);
 }
 
