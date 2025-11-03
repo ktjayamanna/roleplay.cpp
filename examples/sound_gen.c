@@ -14,15 +14,16 @@ EndpointResponse* serve_json(const RequestContext* request) {
 }
 
 int main() {
-    if (server_init(8080) != 0) {
+    int port = 8888;  // Using 8888 to avoid port conflicts
+    if (server_init(port) != 0) {
         fprintf(stderr, "Failed to initialize server\n");
         return 1;
     }
     server_register_handler("/ezio_family", "GET", serve_music);
     server_register_handler("/api/hello", "GET", serve_json);
-    printf("Server running on http://localhost:8080\n");
-    printf("  - Binary: http://localhost:8080/ezio_family\n");
-    printf("  - JSON:   http://localhost:8080/api/hello\n");
+    printf("Server running on http://localhost:%d\n", port);
+    printf("  - Binary: http://localhost:%d/ezio_family\n", port);
+    printf("  - JSON:   http://localhost:%d/api/hello\n", port);
     server_start();
     return 0;
 }

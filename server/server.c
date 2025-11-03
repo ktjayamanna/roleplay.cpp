@@ -44,10 +44,18 @@ int server_init(int port) {
         return -1;
     }
 
-    // Set socket options
+    // Set socket options to allow address reuse
     int opt = 1;
     if (setsockopt(server.socket_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) {
-        perror("setsockopt");
+        perror("setsockopt SO_REUSEADDR");
+        close(server.socket_fd);
+        return -1;
+    }
+
+    // Also set SO_REUSEPORT for better port reuse
+    if (setsockopt(server.socket_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == -1) {
+        perror("setsockopt SO_REUSEPORT");
+        close(server.socket_fd);
         return -1;
     }
 
@@ -56,10 +64,14 @@ int server_init(int port) {
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = INADDR_ANY;
+
+    printf("Attempting to bind to port %d (socket_fd=%d)...\n", port, server.socket_fd);
     if (bind(server.socket_fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
         perror("bind");
+        close(server.socket_fd);
         return -1;
     }
+    printf("Successfully bound to port %d\n", port);
 
     // Start listening
     if (listen(server.socket_fd, 10) == -1) {

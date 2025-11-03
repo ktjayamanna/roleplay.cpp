@@ -51,6 +51,7 @@ $(BUILD_DIR)/%.o: ../server/%.c | $(BUILD_DIR)
 
 # Run the built application
 run: $(APP_EXE)
+	@make kill
 	@echo "Running $(APP_NAME).exe..."
 	@$(APP_EXE)
 
@@ -63,6 +64,13 @@ clean:
 	rm -rf $(BUILD_DIR)
 	@echo "✓ Clean complete! (removed $(BUILD_DIR)/)"
 
+# Kill any processes using port 8888
+kill:
+	@echo "Killing processes on port 8888..."
+	@fuser -k 8888/tcp 2>/dev/null || echo "No processes found on port 8888"
+	@sleep 1
+	@echo "✓ Port 8888 freed"
+
 # ============================================================================
 # TEST TARGETS
 # ============================================================================
@@ -72,17 +80,18 @@ test: $(APP_EXE)
 	@if [ "$(APP_NAME)" = "calculator" ]; then \
 		echo "Testing calculator endpoints..."; \
 		echo "Starting server in background..."; \
+		make kill; \
 		$(APP_EXE) & \
 		SERVER_PID=$$!; \
 		sleep 2; \
 		echo "Addition (5 + 3):"; \
-		curl -s "http://localhost:8080/add?a=5&b=3" | head -1; \
+		curl -s "http://localhost:8888/add?a=5&b=3" | head -1; \
 		echo ""; \
 		echo "Addition (100 + 200):"; \
-		curl -s "http://localhost:8080/add?a=100&b=200" | head -1; \
+		curl -s "http://localhost:8888/add?a=100&b=200" | head -1; \
 		echo ""; \
 		echo "Error test (missing parameter):"; \
-		curl -s "http://localhost:8080/add?a=5" | head -1; \
+		curl -s "http://localhost:8888/add?a=5" | head -1; \
 		echo ""; \
 		kill $$SERVER_PID 2>/dev/null || true; \
 	else \
@@ -99,13 +108,15 @@ help:
 	@echo "  make run                 - Run the built application"
 	@echo "  make test                - Run tests for the application"
 	@echo "  make clean               - Remove all build artifacts"
+	@echo "  make kill                - Kill processes on port 8888"
 	@echo ""
 	@echo "Examples:"
 	@echo "  make APP_NAME=calculator - Build calculator.exe"
 	@echo "  make APP_NAME=sound_gen  - Build sound_gen.exe"
 	@echo "  make run                 - Run the current app"
+	@echo "  make kill                - Free up port 8888"
 	@echo ""
 	@echo "Current app: $(APP_NAME)"
 	@echo "Output: $(BUILD_DIR)/$(APP_NAME).exe"
 
-.PHONY: all run clean test help
+.PHONY: all run clean test help kill
