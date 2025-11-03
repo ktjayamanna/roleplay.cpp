@@ -22,10 +22,36 @@ EndpointResponse* handle_upload(const RequestContext* request) {
         return response_error(400, "Only MP3 files are accepted");
     }
 
+    // ========================================================================
+    // BUFFER AVAILABLE FOR DOWNSTREAM TASKS
+    // ========================================================================
+    // The MP3 file data is now in memory and ready to use:
+    //   - file.data: pointer to the raw MP3 binary data
+    //   - file.size: size of the data in bytes
+    //
+    // You can use this buffer for:
+    //   1. Writing to disk: fwrite(file.data, 1, file.size, fp)
+    //   2. Streaming to another service
+    //   3. Processing/analyzing the audio data
+    //   4. Storing in a database
+    //   5. Any other downstream task
+    // ========================================================================
+
+    printf("\n=== MP3 Buffer Ready ===\n");
+    printf("Buffer: %p, Size: %zu bytes (%.2f MB)\n",
+           (void*)file.data, file.size, file.size / (1024.0 * 1024.0));
+    printf("First 16 bytes: ");
+    for (int i = 0; i < 16 && i < (int)file.size; i++) {
+        printf("%02X ", (unsigned char)file.data[i]);
+    }
+    printf("\n");
+    printf("Usage: fwrite(file.data, 1, file.size, fp) to save to disk\n");
+    printf("========================\n\n");
+
     // Build response with file info
     char response[512];
     snprintf(response, sizeof(response),
-        "{\"status\": \"success\", \"filename\": \"%s\", \"content_type\": \"%s\", \"size\": %zu}",
+        "{\"status\": \"success\", \"filename\": \"%s\", \"content_type\": \"%s\", \"size\": %zu, \"buffer_ready\": true}",
         file.filename, file.content_type, file.size);
 
     return response_json(200, response);
