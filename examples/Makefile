@@ -9,10 +9,27 @@ BUILD_DIR = build
 LIB_SRCS = ../server/server.c ../server/http.c ../server/endpoint.c
 LIB_OBJS = $(patsubst ../server/%.c,$(BUILD_DIR)/%.o,$(LIB_SRCS))
 
+# WebSocket library files (optional - only for WebSocket apps)
+WS_LIB_SRCS = ../server/websocket.c ../server/ws_endpoint.c
+WS_LIB_OBJS = $(patsubst ../server/%.c,$(BUILD_DIR)/%.o,$(WS_LIB_SRCS))
+
+# WebSocket apps that need additional libraries
+WS_APPS = ws_echo
+
+# Determine if current app needs WebSocket support
+ifeq ($(filter $(APP_NAME),$(WS_APPS)),$(APP_NAME))
+    ALL_LIB_OBJS = $(LIB_OBJS) $(WS_LIB_OBJS)
+    LDFLAGS = -lssl -lcrypto -lpthread
+    CFLAGS += -DENABLE_WEBSOCKET
+else
+    ALL_LIB_OBJS = $(LIB_OBJS)
+    LDFLAGS =
+endif
+
 # ============================================================================
 # APP CONFIGURATION - Change APP_NAME to build different apps
 # ============================================================================
-APP_NAME ?= upload_server
+APP_NAME ?= ws_echo
 
 # Application source and output
 APP_SRC = $(APP_NAME).c
@@ -34,8 +51,8 @@ $(BUILD_DIR):
 	@mkdir -p $(BUILD_DIR)
 
 # Build the application executable
-$(APP_EXE): $(APP_OBJ) $(LIB_OBJS) | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -o $@ $(APP_OBJ) $(LIB_OBJS)
+$(APP_EXE): $(APP_OBJ) $(ALL_LIB_OBJS) | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -o $@ $(APP_OBJ) $(ALL_LIB_OBJS) $(LDFLAGS)
 
 # Compile application source
 $(BUILD_DIR)/%.o: %.c | $(BUILD_DIR)

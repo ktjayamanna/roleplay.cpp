@@ -1,8 +1,20 @@
 # Server Folder Overview
 
+This is a modular C HTTP/WebSocket server library with a simple, intuitive API.
+
+## Features
+
+- **HTTP REST API** - GET, POST, PUT, DELETE endpoints
+- **WebSocket Support** - Real-time bidirectional communication
+- **Binary Data** - Full support for binary payloads (MP3, images, etc.)
+- **Modular Design** - Easy to add new endpoints without modifying core code
+- **Optional WebSocket** - WebSocket support is opt-in, doesn't affect HTTP-only apps
+
+---
+
 ## 1. server.h - Main Library Header
 
-Defines the public API for the HTTP server library. Key components:
+Defines the public API for the HTTP and WebSocket server library. Key components:
 
 **Enums & Structs:**
 - `HttpMethod` - Enum for HTTP methods (GET, POST, PUT, DELETE)
@@ -262,3 +274,141 @@ EndpointResponse* handle_params(const RequestContext* request) {
     return response_json(200, "{\"ok\": true}");
 }
 ```
+---
+
+## 7. WebSocket Support
+
+### Overview
+
+The server includes optional WebSocket support for real-time, bidirectional communication. WebSocket support is **opt-in** and doesn't affect HTTP-only applications.
+
+### Files
+
+- **websocket.h/c** - WebSocket protocol implementation (handshake, frame encoding/decoding)
+- **ws_endpoint.h/c** - WebSocket endpoint registry (mirrors HTTP endpoint system)
+
+### WebSocket API
+
+**Types:**
+```c
+typedef struct {
+    int fd;           // Socket file descriptor
+    int id;           // Unique client ID
+    int is_active;    // Connection status
+    char path[256];   // Endpoint path
+} WebSocketClient;
+
+typedef void (*WsConnectHandler)(WebSocketClient* client);
+typedef void (*WsMessageHandler)(WebSocketClient* client, const char* message, int length, int is_binary);
+typedef void (*WsDisconnectHandler)(WebSocketClient* client);
+```
+
+**Registration:**
+```c
+SERVER_WS(path, on_message, on_connect, on_disconnect);
+```
+
+**Sending Data:**
+```c
+int ws_send_text(WebSocketClient* client, const char* message);
+int ws_send_binary(WebSocketClient* client, const void* data, size_t length);
+```
+
+### Example: Echo Server
+
+```c
+#include "../server/server.h"
+#include <stdio.h>
+
+void handle_connect(WebSocketClient* client) {
+    printf("Client %d connected\n", client->id);
+    ws_send_text(client, "Welcome!");
+}
+
+void handle_message(WebSocketClient* client, const char* message, int length, int is_binary) {
+    if (is_binary) {
+        // Echo binary data
+        ws_send_binary(client, message, length);
+    } else {
+        // Echo text message
+        ws_send_text(client, message);
+    }
+}
+
+void handle_disconnect(WebSocketClient* client) {
+    printf("Client %d disconnected\n", client->id);
+}
+
+int main() {
+    server_init(8080);
+
+    // Register WebSocket endpoint
+    SERVER_WS("/echo", handle_message, handle_connect, handle_disconnect);
+
+    server_start();
+    return 0;
+}
+```
+
+### Building with WebSocket Support
+
+To enable WebSocket support, define `ENABLE_WEBSOCKET` and link against OpenSSL and pthread:
+
+```makefile
+CFLAGS += -DENABLE_WEBSOCKET
+LDFLAGS = -lssl -lcrypto -lpthread
+
+# Include WebSocket source files
+SRCS = server.c http.c endpoint.c websocket.c ws_endpoint.c
+```
+
+### Binary Data Support
+
+WebSocket natively supports binary frames, making it ideal for streaming:
+
+- **MP3/Audio streaming** - Send raw audio bytes without encoding overhead
+- **Images** - Transfer binary image data efficiently
+- **File transfers** - Stream large files in chunks
+
+Example:
+```c
+void stream_mp3(WebSocketClient* client) {
+    FILE* f = fopen("music.mp3", "rb");
+    char buffer[4096];
+
+    while (!feof(f)) {
+        int bytes = fread(buffer, 1, sizeof(buffer), f);
+        ws_send_binary(client, buffer, bytes);
+    }
+
+    fclose(f);
+}
+```
+
+### HTTP + WebSocket Coexistence
+
+HTTP and WebSocket endpoints work side-by-side:
+
+```c
+// HTTP endpoint
+EndpointResponse* handle_api(const RequestContext* req) {
+    return response_json(200, "{\"status\": \"ok\"}");
+}
+
+// WebSocket endpoint
+void handle_ws(WebSocketClient* client, const char* msg, int len, int is_binary) {
+    ws_send_text(client, "Received!");
+}
+
+int main() {
+    server_init(8080);
+
+    SERVER_GET("/api/status", handle_api);      // HTTP REST
+    SERVER_WS("/ws", handle_ws, NULL, NULL);    // WebSocket
+
+    server_start();
+    return 0;
+}
+```
+---
+

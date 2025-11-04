@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocket Echo Test</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 600px;
+            padding: 30px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .status {
+            text-align: center;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        button {
+            padding: 12px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #764ba2;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .button-group button {
+            flex: 1;
+        }
+        #messages {
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            height: 350px;
+            overflow-y: auto;
+            background: #f9f9f9;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        .message {
+            padding: 8px;
+            margin: 5px 0;
+            border-left: 3px solid #667eea;
+            background: white;
+            border-radius: 3px;
+        }
+        .message.sent {
+            border-left-color: #28a745;
+            background: #f0f8f5;
+        }
+        .message.received {
+            border-left-color: #007bff;
+            background: #f0f7ff;
+        }
+        .message.system {
+            border-left-color: #ffc107;
+            background: #fffbf0;
+            font-style: italic;
+        }
+        .timestamp {
+            color: #999;
+            font-size: 11px;
+            margin-right: 8px;
+        }
+        .clear-btn {
+            background: #dc3545;
+            margin-top: 10px;
+            width: 100%;
+        }
+        .clear-btn:hover {
+            background: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔌 WebSocket Echo Test</h1>
+        <div id="status" class="status disconnected">Disconnected</div>
+        
+        <div class="input-group">
+            <input type="text" id="messageInput" placeholder="Type a message..." autocomplete="off">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+        
+        <div class="button-group">
+            <button onclick="connect()">Connect</button>
+            <button onclick="disconnect()">Disconnect</button>
+            <button onclick="sendBinary()">Send Binary</button>
+        </div>
+        
+        <div id="messages"></div>
+        <button class="clear-btn" onclick="clearMessages()">Clear Messages</button>
+    </div>
+
+    <script>
+        let ws = null;
+
+        // Get WebSocket server address (default to localhost:8080)
+        const WS_SERVER = 'ws://localhost:8080/echo';
+
+        function connect() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                addMessage('Already connected', 'system');
+                return;
+            }
+
+            addMessage('Connecting to ' + WS_SERVER + '...', 'system');
+            ws = new WebSocket(WS_SERVER);
+            
+            ws.onopen = () => {
+                updateStatus(true);
+                addMessage('✓ Connected to server', 'system');
+            };
+            
+            ws.onmessage = (event) => {
+                if (event.data instanceof Blob) {
+                    addMessage('📦 Received binary: ' + event.data.size + ' bytes', 'received');
+                } else {
+                    addMessage('📨 ' + event.data, 'received');
+                }
+            };
+            
+            ws.onerror = (error) => {
+                addMessage('❌ Connection error - Make sure server is running on port 8080', 'system');
+                console.error('WebSocket error:', error);
+            };
+            
+            ws.onclose = () => {
+                updateStatus(false);
+                addMessage('✗ Connection closed', 'system');
+                ws = null;
+            };
+        }
+        
+        function disconnect() {
+            if (ws) {
+                ws.close();
+            } else {
+                addMessage('Not connected', 'system');
+            }
+        }
+        
+        function sendMessage() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                addMessage('❌ Not connected!', 'system');
+                return;
+            }
+            
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (message) {
+                ws.send(message);
+                addMessage('📤 ' + message, 'sent');
+                input.value = '';
+                input.focus();
+            }
+        }
+        
+        function sendBinary() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                addMessage('❌ Not connected!', 'system');
+                return;
+            }
+            
+            const data = new Uint8Array([72, 101, 108, 108, 111]); // "Hello" in bytes
+            ws.send(data.buffer);
+            addMessage('📤 Sent binary: ' + data.length + ' bytes', 'sent');
+        }
+        
+        function addMessage(text, type) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message ' + type;
+            
+            const time = new Date().toLocaleTimeString();
+            messageDiv.innerHTML = '<span class="timestamp">[' + time + ']</span>' + text;
+            
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        function updateStatus(connected) {
+            const statusDiv = document.getElementById('status');
+            if (connected) {
+                statusDiv.className = 'status connected';
+                statusDiv.textContent = '✓ Connected';
+            } else {
+                statusDiv.className = 'status disconnected';
+                statusDiv.textContent = '✗ Disconnected';
+            }
+        }
+        
+        function clearMessages() {
+            document.getElementById('messages').innerHTML = '';
+        }
+        
+        // Allow Enter key to send
+        document.getElementById('messageInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        // Auto-connect on load
+        window.onload = () => {
+            addMessage('Ready! Click "Connect" to start.', 'system');
+        };
+    </script>
+</body>
+</html>
+

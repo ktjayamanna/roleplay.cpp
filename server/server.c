@@ -10,6 +10,12 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#ifdef ENABLE_WEBSOCKET
+#include "websocket.h"
+#include "ws_endpoint.h"
+#include <pthread.h>
+#endif
+
 typedef struct {
     int socket_fd;
     int port;
@@ -17,7 +23,12 @@ typedef struct {
 } InternalServer;
 
 static InternalServer server;
-static void handle_client(int client_fd);
+static int handle_client(int client_fd);
+
+#ifdef ENABLE_WEBSOCKET
+static void handle_websocket_client(int client_fd, const char* path, const char* request);
+static void* websocket_thread(void* arg);
+#endif
 
 int server_init(int port) {
     printf("Initializing server on port %d...\n", port);
@@ -26,6 +37,9 @@ int server_init(int port) {
     server.is_running = 0;
 
     endpoint_system_init();
+#ifdef ENABLE_WEBSOCKET
+    ws_endpoint_system_init();
+#endif
 
     server.socket_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server.socket_fd == -1) {
@@ -78,8 +92,10 @@ int server_start() {
             perror("accept");
             continue;
         }
-        handle_client(client_fd);
-        close(client_fd);
+        int should_close = handle_client(client_fd);
+        if (should_close) {
+            close(client_fd);
+        }
     }
     return 0;
 }
@@ -127,17 +143,32 @@ HttpResponse* handle_route_with_body(char* method, char* url, const char* conten
     }
 }
 
-static void handle_client(int client_fd) {
+static int handle_client(int client_fd) {
     char header_buffer[4096];
     ssize_t bytes_read = read(client_fd, header_buffer, sizeof(header_buffer) - 1);
     if (bytes_read <= 0) {
-        return;
+        return 1; // Close the socket
     }
     header_buffer[bytes_read] = '\0';
 
     char method[10], url[256];
     http_parse_request(header_buffer, method, url);
 
+    // Extract path from URL (remove query string)
+    char path[256];
+    char query_string[512];
+    parse_url(url, path, query_string);
+
+#ifdef ENABLE_WEBSOCKET
+    // Check if this is a WebSocket upgrade request
+    if (ws_is_upgrade_request(header_buffer) && ws_endpoint_exists(path)) {
+        printf("WebSocket upgrade request detected for path: %s\n", path);
+        handle_websocket_client(client_fd, path, header_buffer);
+        return 0; // Don't close the socket - WebSocket thread manages it
+    }
+#endif
+
+    // Regular HTTP handling
     char content_type[128];
     http_get_content_type(header_buffer, content_type, sizeof(content_type));
     int content_length = http_get_content_length(header_buffer);
@@ -151,7 +182,7 @@ static void handle_client(int client_fd) {
 
         body = malloc(content_length);
         if (!body) {
-            return;
+            return 1; // Close the socket
         }
 
         memcpy(body, body_in_buffer, body_already_read);
@@ -163,7 +194,7 @@ static void handle_client(int client_fd) {
                 ssize_t additional = read(client_fd, body + body_already_read + total_read, remaining - total_read);
                 if (additional <= 0) {
                     free(body);
-                    return;
+                    return 1; // Close the socket
                 }
                 total_read += additional;
             }
@@ -179,6 +210,8 @@ static void handle_client(int client_fd) {
     if (body) {
         free(body);
     }
+
+    return 1; // Close the socket after HTTP response
 }
 
 static HttpMethod parse_method_string(const char* method_str) {
@@ -220,3 +253,101 @@ EndpointResponse* response_error(int status_code, const char* error_message) {
     return endpoint_error_response(status_code, error_message);
 }
 
+#ifdef ENABLE_WEBSOCKET
+// WebSocket thread argument
+typedef struct {
+    int client_fd;
+    char path[256];
+} WsThreadArg;
+
+static void* websocket_thread(void* arg) {
+    WsThreadArg* ws_arg = (WsThreadArg*)arg;
+    int client_fd = ws_arg->client_fd;
+    char path[256];
+    strncpy(path, ws_arg->path, sizeof(path) - 1);
+    path[sizeof(path) - 1] = '\0';
+    free(ws_arg);
+
+    // Create client object
+    WebSocketClient* client = ws_client_create(client_fd, path);
+    if (!client) {
+        fprintf(stderr, "Failed to create WebSocket client\n");
+        close(client_fd);
+        return NULL;
+    }
+
+    printf("WebSocket client connected: id=%d, path=%s\n", client->id, path);
+
+    // Dispatch connect event
+    ws_endpoint_dispatch_connect(path, client);
+
+    // Message loop
+    while (client->is_active) {
+        WebSocketFrame* frame = ws_read_frame(client_fd);
+        if (!frame) {
+            printf("WebSocket client disconnected: id=%d\n", client->id);
+            break;
+        }
+
+        if (frame->opcode == WS_OPCODE_TEXT || frame->opcode == WS_OPCODE_BINARY) {
+            int is_binary = (frame->opcode == WS_OPCODE_BINARY);
+            ws_endpoint_dispatch_message(path, client, frame->payload,
+                                        frame->payload_length, is_binary);
+        } else if (frame->opcode == WS_OPCODE_CLOSE) {
+            printf("WebSocket close frame received from client %d\n", client->id);
+            ws_send_close(client);
+            ws_frame_free(frame);
+            break;
+        } else if (frame->opcode == WS_OPCODE_PING) {
+            ws_send_pong(client, frame->payload, frame->payload_length);
+        }
+
+        ws_frame_free(frame);
+    }
+
+    // Dispatch disconnect event
+    ws_endpoint_dispatch_disconnect(path, client);
+
+    // Cleanup
+    ws_client_destroy(client);
+    close(client_fd);
+
+    return NULL;
+}
+
+static void handle_websocket_client(int client_fd, const char* path, const char* request) {
+    // Perform WebSocket handshake
+    if (ws_perform_handshake(client_fd, request) != 0) {
+        fprintf(stderr, "WebSocket handshake failed\n");
+        close(client_fd);
+        return;
+    }
+
+    printf("WebSocket handshake successful for path: %s\n", path);
+
+    // Create thread argument
+    WsThreadArg* arg = malloc(sizeof(WsThreadArg));
+    arg->client_fd = client_fd;
+    strncpy(arg->path, path, sizeof(arg->path) - 1);
+    arg->path[sizeof(arg->path) - 1] = '\0';
+
+    // Spawn thread to handle WebSocket connection
+    pthread_t thread;
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+    if (pthread_create(&thread, &attr, websocket_thread, arg) != 0) {
+        fprintf(stderr, "Failed to create WebSocket thread\n");
+        free(arg);
+        close(client_fd);
+    }
+
+    pthread_attr_destroy(&attr);
+}
+
+int server_register_ws_handler(const char* path, WsHandlers handlers) {
+    printf("Registering WebSocket endpoint: %s\n", path);
+    return ws_endpoint_register(path, handlers);
+}
+#endif
